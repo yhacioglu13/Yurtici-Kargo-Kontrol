@@ -6,9 +6,11 @@ Adımları sırayla veya tek tek çalıştırabilirsin.
 
 from __future__ import annotations
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
+
+from config import LEGACY_AUTOMATION_PATH
 
 from app import (
     qr_okuma,
@@ -40,10 +42,7 @@ def run_step_3_yurtici_legacy() -> None:
     """3. Adım: Geçici olarak V3 içindeki yurtici_site_otomasyon.py çalıştırılır."""
     print("\n=== 3) Yurtiçi sitesine otomatik talep (V2 otomasyonu) ===\n")
 
-    v2_script = Path(
-        r"C:\Users\SL02.POLINT\Desktop\MASAÜSTÜ\Yazılım Çalışmalarım"
-        r"\Yurtiçi Kargo Çalışmaları V3\app\yurtici_site_otomasyon.py"
-    )
+    v2_script = Path(LEGACY_AUTOMATION_PATH)
 
     if not v2_script.exists():
         print(f"❌ Otomasyon dosyası bulunamadı: {v2_script}")

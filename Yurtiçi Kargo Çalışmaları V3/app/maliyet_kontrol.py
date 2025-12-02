@@ -47,18 +47,28 @@ def load_tariff() -> pd.DataFrame | None:
 
     try:
         df_tarife = pd.read_excel(tariff_path, sheet_name="Tarife")
-        print(f"📄 Tarife Excel yüklendi: {tariff_path}")
-        return df_tarife
     except Exception as exc:
         print(f"❌ Hata: Tarife Excel okunamadı! ({exc})")
         return None
+
+    missing_cols = {"YURTİÇİ KARGO", "maliyet"} - set(df_tarife.columns)
+    if missing_cols:
+        print(f"❌ Tarife Excel eksik sütunlar içeriyor: {missing_cols}")
+        return None
+
+    print(f"📄 Tarife Excel yüklendi: {tariff_path}")
+    return df_tarife
 
 
 def hesapla_maliyet_factory(df_tarife: pd.DataFrame):
     """Desi'ye göre maliyet hesaplayan fonksiyonu, tarife tablosuna göre üretir."""
 
-    def get_cost_for_step(step: int) -> float:
-        return df_tarife.loc[df_tarife["YURTİÇİ KARGO"] == step, "maliyet"].values[0]
+    def get_cost_for_step(step: int) -> float | None:
+        matches = df_tarife.loc[df_tarife["YURTİÇİ KARGO"] == step, "maliyet"].values
+        if matches.size == 0:
+            print(f"⚠️ Tarife satırı bulunamadı (desi adımı={step}).")
+            return None
+        return matches[0]
 
     def hesapla_maliyet(desi) -> float | None:
         try:
@@ -95,6 +105,8 @@ def hesapla_maliyet_factory(df_tarife: pd.DataFrame):
         else:
             ana = get_cost_for_step(12)
             ek = get_cost_for_step(13)
+            if ana is None or ek is None:
+                return None
             return ana + (desi - 50) * ek
 
     return hesapla_maliyet
@@ -253,6 +265,14 @@ def run_maliyet_kontrol() -> None:
     df_tarife = load_tariff()
     if df_tarife is None:
         return
+
+    # Tip dönüşümleri
+    numeric_cols = ["Desi / Kg", "Ürün Bedeli"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        else:
+            print(f"⚠️ Uyarı: '{col}' kolonu bulunamadı, hesaplamalar eksik olabilir.")
 
     # Maliyet hesapla
     hesapla_maliyet = hesapla_maliyet_factory(df_tarife)
