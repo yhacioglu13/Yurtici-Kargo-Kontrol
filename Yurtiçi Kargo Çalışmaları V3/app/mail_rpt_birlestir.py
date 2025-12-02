@@ -5,8 +5,8 @@ from pathlib import Path
 import shutil
 import pandas as pd
 
-from config import PROJECT_ROOT
-from app.helpers import today_str_en, ensure_folder
+from config import DOWNLOADS_FOLDER, MAIL_EXCEL_ROOT
+from app.helpers import ensure_folder, today_str_en
 
 
 # Eski sistemde kullandığın düzenli sütun listesi
@@ -78,12 +78,11 @@ def merge_rpt_excels() -> Path | None:
     """
 
     # 📂 Kullanıcının indirmeler klasörü
-    downloads = Path.home() / "Downloads"
+    downloads = Path(DOWNLOADS_FOLDER)
 
     # 📌 Bugünün klasörü V3 içinde
     today = today_str_en()
-    target_folder = PROJECT_ROOT / "MailExcels" / today
-    ensure_folder(target_folder)
+    target_folder = ensure_folder(Path(MAIL_EXCEL_ROOT) / today)
 
     # 🔍 RPT formatındaki Excel dosyalarını bul
     rpt_files = list(downloads.glob("RPT*.xls")) + list(downloads.glob("RPT*.xlsx"))
@@ -110,7 +109,23 @@ def merge_rpt_excels() -> Path | None:
             df_raw = pd.read_excel(dest, dtype=str, skiprows=4)
 
             # Sadece ihtiyacımız olan sütunları al
-            df = df_raw[TARGET_COLUMNS].copy()
+            available_cols = [col for col in TARGET_COLUMNS if col in df_raw.columns]
+            missing_cols = [col for col in TARGET_COLUMNS if col not in available_cols]
+
+            if not available_cols:
+                print(
+                    f"   ❌ Okuma başarısız: beklenen sütunların hiçbiri yok ({file.name})."
+                )
+                continue
+
+            if missing_cols:
+                print(
+                    f"   ⚠️ Eksik sütunlar: {', '.join(missing_cols)} — mevcut alanlarla devam."
+                )
+
+            df = df_raw[available_cols].copy()
+            for missing in missing_cols:
+                df[missing] = None
 
             # Tamamen boş satırları temizle
             df.dropna(how="all", inplace=True)

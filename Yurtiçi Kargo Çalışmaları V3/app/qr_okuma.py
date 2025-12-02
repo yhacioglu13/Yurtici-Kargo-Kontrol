@@ -14,8 +14,8 @@ import pandas as pd
 from PIL import Image
 from pyzbar.pyzbar import decode
 
-from config import Z_EFATURA_FOLDER, YURTICI_PREFIXES, PROJECT_ROOT
-from app.helpers import ensure_folder, today_str_en
+from config import QR_OUTPUT_PATH, YURTICI_PREFIXES, Z_EFATURA_FOLDER
+from app.helpers import ensure_folder
 
 
 def find_qr_in_pdf(pdf_path: Path) -> List[dict]:
@@ -95,10 +95,16 @@ def process_all_pdfs() -> Path | None:
     if "no" in df.columns:
         df.drop_duplicates(subset=["no"], inplace=True)
 
-    output = PROJECT_ROOT / "Duzenlenen_QR_listesi.xlsx"
-    df.to_excel(output, index=False)
+    output = QR_OUTPUT_PATH
+    ensure_folder(output.parent)
 
-    print(f"✅ QR kodları kaydedildi → {output}")
+    try:
+        df.to_excel(output, index=False)
+        print(f"✅ QR kodları kaydedildi → {output}")
+    except Exception as exc:
+        print(f"❌ QR sonuçları yazılamadı: {output} ({exc})")
+        return None
+
     return output
 
 
